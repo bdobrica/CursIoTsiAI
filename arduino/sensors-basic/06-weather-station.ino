@@ -39,10 +39,13 @@
 #include <Seeed_BMP280.h> // "Grove - Barometer Sensor BMP280" library
 #include <LIS3DHTR.h> // "LIS3DHTR" library
 
+const int waitSensorMs = 1000;
 const int waitErrorMs = 1000; // Wait time before retrying sensor initialization
 const int waitMs = 200; // Delay between readings
 
 const int sensorPin = A6; // Light sensor PIN
+const int ledPin = 4; // LED PIN
+const int threshold = 200; // Light sensor threshold
 const int soundPin = A2; // Sound sensor PIN
 DHT dht(DHT20); // Create a DHT object using the DHT20 constant
 BMP280 bmp280; // Create a BMP280 object, for accessing the sensor
@@ -55,12 +58,37 @@ void setup(void)
     /**
      * Fill in the initialization code for the light and sound sensors.
      */
+    pinMode(ledPin, OUTPUT); // Set LED pin as output
+    DEBUG_PRINTLN("LED conectat.");
+
+    pinMode(sensorPin, INPUT); // Set light sensor pin as input
+    DEBUG_PRINTLN("Light sensor conectat.");
+
     Wire.begin(); // Start I2C bus
     dht.begin(); // Start DHT sensor
+    DEBUG_PRINTLN("DHT Sensor initialized."); // Print message to serial monitor
+
     /**
      * Fill in the initialization code for the pressure and accelerometer
      * sensors.
      */
+
+    while (!bmp280.init()) // Initialize BMP280 sensor
+    { // If sensor could not be initialized, print error message
+        DEBUG_PRINTLN("Sensor could not be found. Check wiring.");
+        delay(waitErrorMs); // Wait before retrying
+    }
+    DEBUG_PRINTLN("BMP280 Sensor initialized."); // Print message to serial monitor
+
+
+    LIS.begin(Wire, 0x19);
+    do {
+        DEBUG_PRINTLN("Așteptare senzor...");
+        delay(waitSensorMs);
+    } while (!LIS);
+    LIS.setOutputDataRate(LIS3DHTR_DATARATE_50HZ);
+    DEBUG_PRINTLN("Accelerator senzor conectat.");
+
     u8x8.begin(); // Start OLED display
     u8x8.setPowerSave(0); // Set display power save mode to off
     u8x8.setFlipMode(1); // Set display flip mode to on
@@ -93,6 +121,14 @@ void loop(void)
     /**
      * Fill in the code to print the sensor values in CSV format to the serial
      */ 
+
+    DEBUG_PRINT("TMP_1: ");
+    DEBUG_PRINT(temp_h);
+    DEBUG_PRINT("TMP_2: ");
+    DEBUG_PRINT(temp_p);
+    DEBUG_PRINT("LIGHT: ");
+    DEBUG_PRINT(light);
+    DEBUG_PRINTLN("g");
 
     u8x8.setFont(u8x8_font_chroma48medium8_r); // Set font
     u8x8.setCursor(0, 1); // Set cursor position on OLED display
