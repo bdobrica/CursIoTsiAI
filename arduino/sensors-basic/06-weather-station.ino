@@ -52,19 +52,37 @@ LIS3DHTR<TwoWire> LIS; // Configurează I2C în hardware
 void setup(void)
 { // Setup, runs only once, after reset or power on:
     DEBUG_BEGIN; // Start serial monitor, if DEBUG is enabled
-    /**
-     * Fill in the initialization code for the light and sound sensors.
-     */
+    pinMode(ledPin, OUTPUT); // Set LED pin as output
+    pinMode(sensorPin, INPUT); // Set light sensor pin as input
+    DEBUG_BEGIN; // Start serial monitor, if DEBUG is enabled
     Wire.begin(); // Start I2C bus
     dht.begin(); // Start DHT sensor
-    /**
-     * Fill in the initialization code for the pressure and accelerometer
-     * sensors.
-     */
+    while (!bmp280.init()) // Initialize BMP280 sensor
+    { // If sensor could not be initialized, print error message
+        DEBUG_PRINTLN("Sensor could not be found. Check wiring.");
+        delay(waitErrorMs); // Wait before retrying
+    }
+    DEBUG_PRINTLN("Sensor initialized."); // Print message to serial monitor
+    Wire.begin(); // Start I2C bus
+    u8x8.begin(); // Start OLED display
+    u8x8.setPowerSave(0); // Wake up OLED display
+    u8x8.setFlipMode(1); // Rotate OLED display
+    DEBUG_PRINTLN("Display initialized."); // Print message to serial monitor
     u8x8.begin(); // Start OLED display
     u8x8.setPowerSave(0); // Set display power save mode to off
     u8x8.setFlipMode(1); // Set display flip mode to on
     DEBUG_PRINTLN("Display conectat."); // Print message to serial monitor
+    LIS.begin(Wire, 0x19);
+    do {
+        DEBUG_PRINTLN("Așteptare senzor...");
+        delay(waitSensorMs);
+    } while (!LIS);
+    LIS.setOutputDataRate(LIS3DHTR_DATARATE_50HZ);
+    DEBUG_PRINTLN("Senzor conectat.");
+    u8x8.begin();
+    u8x8.setPowerSave(0);
+    u8x8.setFlipMode(1);
+    DEBUG_PRINTLN("Display conectat.");
 }
 
 void loop(void)
@@ -73,26 +91,123 @@ void loop(void)
     float accelX, accelY, accelZ;
 
     light = (float)analogRead(sensorPin) / 1023; // Read light sensor value
-    /**
-     * Fill in the code to read the sound sensor value.
-     */
+    sensorValue = analogRead(soundPin); // Read sound sensor value
+    DEBUG_PRINT("Sensor Value: ");
+    DEBUG_PRINTLN(sensorValue); // Print sensor value to serial monitor
+
+    if (sensorValue > threshold)
+    { // If sensor value is above threshold, turn on LED
+        digitalWrite(ledPin, HIGH); // Turn on LED
+        DEBUG_PRINTLN("LED ON"); // Print LED status to serial monitor
+        delay(onTimeMs); // Keep LED on for a while
+    }
+    else
+    { // If sensor value is below threshold, turn off LED
+        digitalWrite(ledPin, LOW);
+    }
     temp_h = dht.readTemperature(); // Read temperature sensor value
-    /**
-     * Fill in the code to read the humidity sensor value.
-     */
+    float temperature, humidity; // Temperature and humidity variables
+    temperature = dht.readTemperature(); // Read temperature, in Celsius
+    humidity = dht.readHumidity(); // Read humidity, in percentage
+
+    DEBUG_PRINT("Temperature: "); // Print temperature to serial monitor
+    DEBUG_PRINT(temperature);
+    DEBUG_PRINT("C, Humidity: "); // Print humidity to serial monitor
+    DEBUG_PRINT(humidity);
+    DEBUG_PRINTLN("%");
+
+    u8x8.setFont(u8x8_font_chroma48medium8_r); // Set font
+    u8x8.setCursor(0, 1); // Set cursor position on OLED display
+    u8x8.print("Temp:"); // Print temperature to OLED display at cursor position
+    u8x8.print(temperature); // Print temperature to OLED display. Cursor moves
+                             // to the right after printing
+    u8x8.print("C"); // Print "C" to OLED display
+    u8x8.setCursor(0, 10); // Set cursor position on OLED display
+    u8x8.print("Humi:"); // Print humidity to OLED display at cursor position
+    u8x8.print(humidity); // Print humidity to OLED display. Cursor moves to the
+                          // right after printing
+    u8x8.print("%"); // Print "%" to OLED display
+    u8x8.refreshDisplay(); // Refresh OLED display
+    delay(waitMs); // Wait before reading again
     temp_p = bmp280.getTemperature(); // Read temperature sensor value
-    /**
-     * Fill in the code to read the pressure sensor value.
-     */
+    float temperature, pressure, altitude; // Sensor variables
+    temperature = bmp280.getTemperature(); // Read temperature, in Celsius
+    pressure = bmp280.getPressure(); // Read pressure, in Pa
+    altitude = bmp280.calcAltitude(pressure); // Calculate altitude, in meters
+
+    DEBUG_PRINT("Temperature: "); // Print temperature to serial monitor
+    DEBUG_PRINT(temperature);
+    DEBUG_PRINT("C, Pressure: "); // Print pressure to serial monitor
+    DEBUG_PRINT(pressure);
+    DEBUG_PRINT("Pa, Altitude: "); // Print altitude to serial monitor
+    DEBUG_PRINT(altitude);
+
+    u8x8.setFont(u8x8_font_chroma48medium8_r); // Set font
+    u8x8.setCursor(0, 1); // Set cursor position on OLED display
+    u8x8.print("Temp:"); // Print temperature to OLED display at cursor position
+    u8x8.print(temperature); // Print temperature to OLED display. Cursor moves
+                             // to the right after printing
+    u8x8.print("C"); // Print "C" to OLED display
+    u8x8.setCursor(0, 10); // Set cursor position on OLED display
+    u8x8.print("Pres:"); // Print pressure to OLED display at cursor position
+    u8x8.print(pressure); // Print pressure to OLED display. Cursor moves to the
+                          // right after printing
+    u8x8.print("Pa"); // Print "Pa" to OLED display
+    u8x8.setCursor(0, 19); // Set cursor position on OLED display
+    u8x8.print("Alt :"); // Print altitude to OLED display at cursor position
+    u8x8.print(altitude); // Print altitude to OLED display. Cursor moves to the
+                          // right after printing
+    u8x8.print("m"); // Print "m" to OLED display
+    u8x8.refreshDisplay(); // Refresh OLED display
+    delay(waitMs); // Wait before reading again
     altitude = bmp280.calcAltitude(pressure); // Read altitude sensor value
     accelX = LIS.getAccelerationX(); // Read X acceleration sensor value
-    /**
-     * Fill in the code to read the Y and Z acceleration sensor values.
-     */
+    float x, y, z;
+    x = LIS.getAccelerationX();
+    y = LIS.getAccelerationY();
+    z = LIS.getAccelerationZ();
 
-    /**
-     * Fill in the code to print the sensor values in CSV format to the serial
-     */ 
+    DEBUG_PRINT("X: ");
+    DEBUG_PRINT(x);
+    DEBUG_PRINT("g, Y: ");
+    DEBUG_PRINT(y);
+    DEBUG_PRINT("g, Z: ");
+    DEBUG_PRINT(z);
+    DEBUG_PRINTLN("g");
+
+    u8x8.setFont(u8x8_font_chroma48medium8_r); // Set font
+    u8x8.setCursor(0, 1); // Set cursor position on OLED display
+    u8x8.print("X:"); // Print temperature to OLED display at cursor position
+    u8x8.print(x); // Print temperature to OLED display. Cursor moves
+                             // to the right after printing
+    u8x8.print("g"); // Print "C" to OLED display
+    u8x8.setCuror(0, 10); // Set cursor position on OLED display
+    u8x8.print("Y:"); // Print pressure to OLED display at cursor position
+    u8x8.print(y); // Print pressure to OLED display. Cursor moves to the
+                          // right after printing
+    u8x8.print("g"); // Print "Pa" to OLED display
+    u8x8.setCursor(0, 19); // Set cursor position on OLED display
+    u8x8.print("Z:"); // Print altitude to OLED display at cursor position
+    u8x8.print(z); // Print altitude to OLED display. Cursor moves to the
+                          // right after printing
+    u8x8.print("g"); // Print "m" to OLED display
+    u8x8.refreshDisplay(); // Refresh OLED display
+
+    delay(waitMs);
+
+    digitalWrite(ledPin, HIGH); // aprinde ledul
+        // trimite datele prin interfața serială în format CSV, folosind virgula ca separator si 4 zecimale
+        Serial.print(lightValue, 4); Serial.print(","); // trimite valoarea senzorului de lumină prin interfața serială
+        Serial.print(soundValue, 4); Serial.print(","); // trimite valoarea senzorului de sunet prin interfața serială
+        Serial.print(dhtTempValue, 4); Serial.print(","); // trimite valoarea temperaturii prin interfața serială
+        Serial.print(dhtHumiValue, 4); Serial.print(","); // trimite valoarea umidității prin interfața serială
+        Serial.print(bmpTempValue, 4); Serial.print(","); // trimite valoarea temperaturii prin interfața serială
+        Serial.print(bmpPresValue, 4); Serial.print(","); // trimite valoarea presiunii prin interfața serială
+        Serial.print(bmpAltitudeValue, 4); Serial.print(","); // trimite valoarea altitudinii prin interfața serială
+        Serial.print(accX, 4); Serial.print(","); // trimite valoarea acceleratiei pe axa X prin interfața serială
+        Serial.print(accY, 4); Serial.print(","); // trimite valoarea acceleratiei pe axa Y prin interfața serială
+        Serial.println(accZ, 4); // trimite valoarea acceleratiei pe axa Z prin interfața serială
+        digitalWrite(ledPin, LOW);
 
     u8x8.setFont(u8x8_font_chroma48medium8_r); // Set font
     u8x8.setCursor(0, 1); // Set cursor position on OLED display
